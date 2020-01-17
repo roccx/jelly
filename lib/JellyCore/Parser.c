@@ -1889,7 +1889,7 @@ static inline ASTValueDeclarationRef _ParserParseParameterDeclaration(ParserRef 
     return ASTContextCreateValueDeclaration(parser->context, location, parser->currentScope, ASTValueKindParameter, name, type, NULL);
 }
 
-/// grammar: type                     := builtin-type | opaque-type | pointer-type | array-type | function-pointer-type
+/// grammar: type                     := builtin-type | opaque-type | pointer-type | array-type | function-pointer-type | generic-type
 /// grammar: builtin-type             := "Void" | "Bool" |
 ///                                      "Int8" | "Int16" | "Int32" | "Int64" | "Int" |
 ///                                      "UInt8" | "UInt16" | "UInt32" | "UInt64" | "UInt" |
@@ -1898,6 +1898,7 @@ static inline ASTValueDeclarationRef _ParserParseParameterDeclaration(ParserRef 
 /// grammar: pointer-type             := type "*"
 /// grammar: array-type               := type "[" [ expression ] "]"
 /// grammar: function-pointer-type    := "(" [ type { "," type } ] ")" "->" type
+/// grammar: generic-type             := type "<" expression { "," expression } ">"
 static inline ASTTypeRef _ParserParseType(ParserRef parser) {
     SourceRange location = parser->token.location;
     ASTTypeRef result    = NULL;
@@ -1994,6 +1995,47 @@ static inline ASTTypeRef _ParserParseType(ParserRef parser) {
 
         location.end = parser->token.location.start;
         result       = (ASTTypeRef)ASTContextCreateOpaqueType(parser->context, location, parser->currentScope, name);
+
+        if (_ParserConsumeToken(parser, TokenKindLessThan)) {
+            ScopeID argumentScope = _ParserPushScope(parser, location, result, ScopeKindGenericType);
+            ArrayRef arguments    = ArrayCreateEmpty(parser->tempAllocator, sizeof(ASTExpressionRef), 8);
+
+            if (!_ParserIsToken(parser, TokenKindGreaterThan)) {
+                do {
+
+                    LexerStateRef state       = LexerGetState(parser->lexer);
+                    ASTTypeRef type           = _ParserParseType(parser);
+                    ASTExpressionRef argument = NULL;
+                    if (type) {
+                        argument = (ASTExpressionRef)ASTContextCreateTypeExpression(parser->context, location, parser->currentScope, type);
+                    } else {
+                        LexerSetState(parser->lexer, state);
+                        LexerPeekToken(parser->lexer, &parser->token);
+                        argument = _ParserParsePrimaryExpression(parser);
+                    }
+
+                    if (!argument) {
+                        return NULL;
+                    }
+
+                    ArrayAppendElement(arguments, &argument);
+
+                } while (_ParserConsumeToken(parser, TokenKindComma));
+            }
+
+            _ParserPopScope(parser);
+
+            location.end           = parser->token.location.start;
+            ASTGenericTypeRef type = ASTContextCreateGenericType(parser->context, location, parser->currentScope, result, arguments);
+            type->argumentScope    = argumentScope;
+            result                 = (ASTTypeRef)type;
+
+            if (!_ParserConsumeToken(parser, TokenKindGreaterThan)) {
+                return NULL;
+            }
+
+            return result;
+        }
     }
 
     while (true) {
@@ -2097,8 +2139,8 @@ static inline ASTNodeRef _ParserParseTopLevelNode(ParserRef parser) {
     return NULL;
 }
 
-// grammar: top-level-interface-node := load-directive | link-directive | enum-declaration | foreing-func-declaration | struct-declaration |
-// variable-declaration | type-alias
+// grammar: top-level-interface-node := load-directive | link-directive | enum-declaration | foreing-func-declaration | struct-declaration
+//                                    | variable-declaration | type-alias
 static inline ASTNodeRef _ParserParseTopLevelInterfaceNode(ParserRef parser) {
     if (parser->token.kind == TokenKindEndOfFile) {
         return NULL;

@@ -131,6 +131,7 @@ ScopeID SymbolTableGetEnclosingScopeParent(SymbolTableRef table, ScopeID id) {
         case ScopeKindEnumeration:
         case ScopeKindFunction:
         case ScopeKindStructure:
+        case ScopeKindGenericType:
             if (parent->kind == ScopeKindGlobal) {
                 return parent->id;
             }

@@ -17,6 +17,7 @@ enum _ScopeKind {
     ScopeKindFunction    = 1 << 7,
     ScopeKindInitializer = 1 << 8,
     ScopeKindStructure   = 1 << 9,
+    ScopeKindGenericType = 1 << 10,
 };
 typedef enum _ScopeKind ScopeKind;
 

@@ -56,6 +56,7 @@ ASTContextRef ASTContextCreate(AllocatorRef allocator, StringRef moduleName) {
     context->nodes[ASTTagSubscriptExpression]    = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTSubscriptExpression), 8);
     context->nodes[ASTTagTypeOperationExpression] = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTTypeOperationExpression),
                                                                            8);
+    context->nodes[ASTTagTypeExpression] = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTTypeExpression), 8);
     context->nodes[ASTTagModuleDeclaration]       = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTModuleDeclaration), 8);
     context->nodes[ASTTagEnumerationDeclaration] = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTEnumerationDeclaration), 8);
     context->nodes[ASTTagFunctionDeclaration]    = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTFunctionDeclaration), 8);
@@ -74,6 +75,7 @@ ASTContextRef ASTContextCreate(AllocatorRef allocator, StringRef moduleName) {
     context->nodes[ASTTagEnumerationType]        = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTEnumerationType), 8);
     context->nodes[ASTTagFunctionType]           = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTFunctionType), 8);
     context->nodes[ASTTagStructureType]          = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTStructureType), 8);
+    context->nodes[ASTTagGenericType]            = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTGenericType), 8);
     context->module = ASTContextCreateModuleDeclaration(context, SourceRangeNull(), NULL, ASTModuleKindExecutable, moduleName, NULL, NULL);
     SymbolTableSetScopeUserdata(context->symbolTable, kScopeGlobal, context->module);
     _ASTContextInitBuiltinTypes(context);
@@ -484,6 +486,14 @@ ASTTypeOperationExpressionRef ASTContextCreateTypeOperationExpression(ASTContext
     return node;
 }
 
+ASTTypeExpressionRef ASTContextCreateTypeExpression(ASTContextRef context, SourceRange location, ScopeID scope, ASTTypeRef referencedType) {
+    ASTTypeExpressionRef node = (ASTTypeExpressionRef)_ASTContextCreateNode(context, ASTTagTypeExpression, location, scope);
+    node->referencedType      = referencedType;
+    node->base.type           = NULL;
+    node->base.expectedType   = NULL;
+    return node;
+}
+
 ASTModuleDeclarationRef ASTContextCreateModuleDeclaration(ASTContextRef context, SourceRange location, ScopeID scope, ASTModuleKind kind,
                                                           StringRef name, ArrayRef sourceUnits, ArrayRef importedModules) {
     ASTModuleDeclarationRef node = (ASTModuleDeclarationRef)_ASTContextCreateNode(context, ASTTagModuleDeclaration, location, scope);
@@ -725,6 +735,18 @@ ASTStructureTypeRef ASTContextCreateStructureType(ASTContextRef context, SourceR
                                                   ASTStructureDeclarationRef declaration) {
     ASTStructureTypeRef node = (ASTStructureTypeRef)_ASTContextCreateNode(context, ASTTagStructureType, location, scope);
     node->declaration        = declaration;
+    return node;
+}
+
+ASTGenericTypeRef ASTContextCreateGenericType(ASTContextRef context, SourceRange location, ScopeID scope, ASTTypeRef baseType,
+                                              ArrayRef arguments) {
+    ASTGenericTypeRef node = (ASTGenericTypeRef)_ASTContextCreateNode(context, ASTTagGenericType, location, scope);
+    node->baseType         = baseType;
+    node->arguments        = ASTContextCreateArray(context, location, scope);
+    node->argumentScope    = kScopeNull;
+    if (arguments) {
+        ASTArrayAppendArray(node->arguments, arguments);
+    }
     return node;
 }
 

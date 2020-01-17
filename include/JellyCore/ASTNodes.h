@@ -10,8 +10,6 @@
 
 JELLY_EXTERN_C_BEGIN
 
-// TODO: Replace all linked lists...
-
 typedef void *IRRef;
 
 enum _ASTTag {
@@ -40,6 +38,7 @@ enum _ASTTag {
     ASTTagSizeOfExpression,
     ASTTagSubscriptExpression,
     ASTTagTypeOperationExpression,
+    ASTTagTypeExpression,
     ASTTagModuleDeclaration,
     ASTTagEnumerationDeclaration,
     ASTTagFunctionDeclaration,
@@ -56,6 +55,7 @@ enum _ASTTag {
     ASTTagEnumerationType,
     ASTTagFunctionType,
     ASTTagStructureType,
+    ASTTagGenericType,
 
     AST_TAG_COUNT
 };
@@ -116,6 +116,7 @@ typedef struct _ASTConstantExpression *ASTConstantExpressionRef;
 typedef struct _ASTSizeOfExpression *ASTSizeOfExpressionRef;
 typedef struct _ASTSubscriptExpression *ASTSubscriptExpressionRef;
 typedef struct _ASTTypeOperationExpression *ASTTypeOperationExpressionRef;
+typedef struct _ASTTypeExpression *ASTTypeExpressionRef;
 typedef struct _ASTModuleDeclaration *ASTModuleDeclarationRef;
 typedef struct _ASTEnumerationDeclaration *ASTEnumerationDeclarationRef;
 typedef struct _ASTFunctionDeclaration *ASTFunctionDeclarationRef;
@@ -129,6 +130,7 @@ typedef struct _ASTBuiltinType *ASTBuiltinTypeRef;
 typedef struct _ASTEnumerationType *ASTEnumerationTypeRef;
 typedef struct _ASTFunctionType *ASTFunctionTypeRef;
 typedef struct _ASTStructureType *ASTStructureTypeRef;
+typedef struct _ASTGenericType *ASTGenericTypeRef;
 
 struct _ASTNode {
     ASTTag tag;
@@ -448,6 +450,12 @@ struct _ASTTypeOperationExpression {
     ASTTypeRef argumentType;
 };
 
+struct _ASTTypeExpression {
+    struct _ASTExpression base;
+
+    ASTTypeRef referencedType;
+};
+
 // TODO: Move the innerScope value from the subtypes to base declaration!
 struct _ASTDeclaration {
     struct _ASTNode base;
@@ -603,6 +611,14 @@ struct _ASTStructureType {
     struct _ASTNode base;
 
     ASTStructureDeclarationRef declaration;
+};
+
+struct _ASTGenericType {
+    struct _ASTNode base;
+
+    ASTTypeRef baseType;
+    ASTArrayRef arguments;
+    ScopeID argumentScope;
 };
 
 JELLY_EXTERN_C_END

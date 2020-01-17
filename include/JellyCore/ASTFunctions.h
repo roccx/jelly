@@ -20,6 +20,8 @@ StringRef ASTGetPrefixOperatorName(AllocatorRef allocator, ASTUnaryOperator op);
 
 StringRef ASTGetInfixOperatorName(AllocatorRef allocator, ASTBinaryOperator op);
 
+Bool ASTExpressionIsEqual(ASTExpressionRef lhs, ASTExpressionRef rhs);
+
 Bool ASTTypeIsEqual(ASTTypeRef lhs, ASTTypeRef rhs);
 
 Bool ASTTypeIsError(ASTTypeRef type);

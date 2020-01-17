@@ -251,6 +251,11 @@ StringRef ASTGetInfixOperatorName(AllocatorRef allocator, ASTBinaryOperator op) 
     }
 }
 
+Bool ASTExpressionIsEqual(ASTExpressionRef lhs, ASTExpressionRef rhs) {
+    // TODO: Implementation missing!
+    return false;
+}
+
 Bool ASTTypeIsEqual(ASTTypeRef lhs, ASTTypeRef rhs) {
     if (lhs->tag == ASTTagPointerType && rhs->tag == ASTTagPointerType) {
         ASTPointerTypeRef lhsPointer = (ASTPointerTypeRef)lhs;
@@ -348,6 +353,29 @@ Bool ASTTypeIsEqual(ASTTypeRef lhs, ASTTypeRef rhs) {
         assert(rhsStructure->declaration);
 
         return lhsStructure->declaration == rhsStructure->declaration;
+    }
+
+    if (lhs->tag == ASTTagGenericType && rhs->tag == ASTTagGenericType) {
+        ASTGenericTypeRef lhsType = (ASTGenericTypeRef)lhs;
+        ASTGenericTypeRef rhsType = (ASTGenericTypeRef)rhs;
+        if (!ASTTypeIsEqual(lhsType->baseType, rhsType->baseType)) {
+            return false;
+        }
+
+        ASTArrayIteratorRef lhsIterator = ASTArrayGetIterator(lhsType->arguments);
+        ASTArrayIteratorRef rhsIterator = ASTArrayGetIterator(rhsType->arguments);
+
+        while (lhsIterator && rhsIterator) {
+            ASTExpressionRef lhsExpression = (ASTExpressionRef)ASTArrayIteratorGetElement(lhsIterator);
+            ASTExpressionRef rhsExpression = (ASTExpressionRef)ASTArrayIteratorGetElement(rhsIterator);
+
+            if (!ASTExpressionIsEqual(lhsExpression, rhsExpression)) {
+                return false;
+            }
+
+            lhsIterator = ASTArrayIteratorNext(lhsIterator);
+            rhsIterator = ASTArrayIteratorNext(rhsIterator);
+        }
     }
 
     return false;

@@ -89,6 +89,8 @@ ASTTypeOperationExpressionRef ASTContextCreateTypeOperationExpression(ASTContext
                                                                       ASTTypeOperation op, ASTExpressionRef expression,
                                                                       ASTTypeRef expressionType);
 
+ASTTypeExpressionRef ASTContextCreateTypeExpression(ASTContextRef context, SourceRange location, ScopeID scope, ASTTypeRef referencedType);
+
 ASTModuleDeclarationRef ASTContextCreateModuleDeclaration(ASTContextRef context, SourceRange location, ScopeID scope, ASTModuleKind kind,
                                                           StringRef moduleName, ArrayRef sourceUnits, ArrayRef importedModules);
 
@@ -136,6 +138,9 @@ ASTFunctionTypeRef ASTContextCreateFunctionType(ASTContextRef context, SourceRan
 
 ASTStructureTypeRef ASTContextCreateStructureType(ASTContextRef context, SourceRange location, ScopeID scope,
                                                   ASTStructureDeclarationRef declaration);
+
+ASTGenericTypeRef ASTContextCreateGenericType(ASTContextRef context, SourceRange location, ScopeID scope, ASTTypeRef baseType,
+                                              ArrayRef arguments);
 
 ASTBuiltinTypeRef ASTContextGetBuiltinType(ASTContextRef context, ASTBuiltinTypeKind kind);
 

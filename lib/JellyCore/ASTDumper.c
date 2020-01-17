@@ -224,6 +224,12 @@ void ASTDumperDump(ASTDumperRef dumper, ASTNodeRef node) {
         return;
     }
 
+    case ASTTagTypeExpression: {
+        ASTTypeExpressionRef expression = (ASTTypeExpressionRef)node;
+        _ASTDumperDumpChild(dumper, (ASTNodeRef)expression->referencedType);
+        return;
+    }
+
     case ASTTagModuleDeclaration: {
         ASTModuleDeclarationRef module = (ASTModuleDeclarationRef)node;
         _ASTDumperDumpChildrenArray(dumper, module->importedModules);
@@ -327,6 +333,13 @@ void ASTDumperDump(ASTDumperRef dumper, ASTNodeRef node) {
         ASTFunctionTypeRef type = (ASTFunctionTypeRef)node;
         _ASTDumperDumpChildrenArray(dumper, type->parameterTypes);
         _ASTDumperDumpChild(dumper, type->resultType);
+        return;
+    }
+
+    case ASTTagGenericType: {
+        ASTGenericTypeRef type = (ASTGenericTypeRef)node;
+        _ASTDumperDumpChild(dumper, type->baseType);
+        _ASTDumperDumpChildrenArray(dumper, type->arguments);
         return;
     }
 
@@ -456,6 +469,9 @@ static inline void _ASTDumperPrintTag(ASTDumperRef dumper, ASTNodeRef node) {
     case ASTTagSubscriptExpression:
         return _ASTDumperPrintCString(dumper, "SubscriptExpression");
 
+    case ASTTagTypeExpression:
+        return _ASTDumperPrintCString(dumper, "TypeExpression");
+
     case ASTTagModuleDeclaration:
         return _ASTDumperPrintCString(dumper, "ModuleDeclaration");
 
@@ -503,6 +519,9 @@ static inline void _ASTDumperPrintTag(ASTDumperRef dumper, ASTNodeRef node) {
 
     case ASTTagFunctionType:
         return _ASTDumperPrintCString(dumper, "FunctionType");
+
+    case ASTTagGenericType:
+        return _ASTDumperPrintCString(dumper, "GenericType");
 
     default:
         break;

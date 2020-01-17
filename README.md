@@ -117,7 +117,7 @@ enumeration-element-declaration := "case" identifier [ "=" expression ]
 
 parameter-declaration := identifier ":" type-identifier
 
-type                     := builtin-type | opaque-type | pointer-type | array-type | function-pointer-type
+type                     := builtin-type | opaque-type | pointer-type | array-type | function-pointer-type | generic-type
 builtin-type             := "Void" | "Bool" |
                             "Int8" | "Int16" | "Int32" | "Int64" | "Int" |
                             "UInt8" | "UInt16" | "UInt32" | "UInt64" | "UInt" |
@@ -126,6 +126,7 @@ opaque-type              := identifier
 pointer-type             := type "*"
 array-type               := type "[" [ expression ] "]"
 function-pointer-type    := "(" [ type { "," type } ] ")" "->" type
+generic-type             := type "<" expression { "," expression } ">"
 
 top-level-node := directive | enum-declaration | func-declaration | struct-declaration | variable-declaration
 top-level-interface-node := load-directive | link-directive | enum-declaration | foreing-func-declaration | struct-declaration | variable-declaration | type-alias

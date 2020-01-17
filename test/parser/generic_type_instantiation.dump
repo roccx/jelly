@@ -1,0 +1,19 @@
+ModuleDeclaration
+  SourceUnit
+    @filePath = 'generic_type_instantiation.jelly'
+    VariableDeclaration
+      @name = 'type'
+      GenericType
+        OpaqueType
+          @name = 'GenericType'
+        TypeExpression
+          BuiltinType
+            @name = 'Int'
+        BinaryExpression
+          @operator = '*'
+          IntLiteral
+            @value = '4'
+          IntLiteral
+            @value = '4'
+        BoolLiteral
+          @value = 'false'
