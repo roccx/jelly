@@ -1,0 +1,68 @@
+ModuleDeclaration
+  SourceUnit
+    @filePath = 'generic_structures.jelly'
+    GenericStructureDeclaration
+      @name = 'FloatVector'
+      ParameterDeclaration
+        @name = 'count'
+        BuiltinType
+          @name = 'Int'
+      VariableDeclaration
+        @name = 'buffer'
+        ArrayType
+          BuiltinType
+            @name = 'Float'
+          IdentifierExpression
+            @identifier = 'count'
+    GenericStructureDeclaration
+      @name = 'Vector'
+      ParameterDeclaration
+        @name = 'Element'
+        OpaqueType
+          @name = 'Type'
+      ParameterDeclaration
+        @name = 'count'
+        BuiltinType
+          @name = 'Int'
+      VariableDeclaration
+        @name = 'buffer'
+        ArrayType
+          OpaqueType
+            @name = 'Element'
+          IdentifierExpression
+            @identifier = 'count'
+    GenericStructureDeclaration
+      @name = 'View'
+      ParameterDeclaration
+        @name = 'Model'
+        OpaqueType
+          @name = 'Type'
+      VariableDeclaration
+        @name = 'model'
+        OpaqueType
+          @name = 'Model'
+    VariableDeclaration
+      @name = 'floatVector3'
+      GenericType
+        OpaqueType
+          @name = 'FloatVector'
+        IntLiteral
+          @value = '3'
+    VariableDeclaration
+      @name = 'intVector4'
+      GenericType
+        OpaqueType
+          @name = 'Vector'
+        TypeExpression
+          BuiltinType
+            @name = 'Int'
+        IntLiteral
+          @value = '4'
+    VariableDeclaration
+      @name = 'view'
+      GenericType
+        OpaqueType
+          @name = 'View'
+        TypeExpression
+          BuiltinType
+            @name = 'Int'

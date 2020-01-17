@@ -111,6 +111,10 @@ ASTFunctionDeclarationRef ASTContextCreateIntrinsicFunctionDeclaration(ASTContex
 ASTStructureDeclarationRef ASTContextCreateStructureDeclaration(ASTContextRef context, SourceRange location, ScopeID scope, StringRef name,
                                                                 ArrayRef values, ArrayRef initializers);
 
+ASTGenericStructureDeclarationRef ASTContextCreateGenericStructureDeclaration(ASTContextRef context, SourceRange location, ScopeID scope,
+                                                                              StringRef name, ArrayRef genericParameters, ArrayRef values,
+                                                                              ArrayRef initializers);
+
 ASTInitializerDeclarationRef ASTContextCreateInitializerDeclaration(ASTContextRef context, SourceRange location, ScopeID scope,
                                                                     ArrayRef parameters, ASTBlockRef body);
 

@@ -1,0 +1,15 @@
+struct FloatVector<count: Int> {
+    var buffer: Float[count]
+}
+
+struct Vector<Element: Type, count: Int> {
+    var buffer: Element[count]
+}
+
+struct View<Model: Type> {
+    var model: Model
+}
+
+var floatVector3: FloatVector<3>
+var intVector4: Vector<Int, 4>
+var view: View<Int>

@@ -64,7 +64,9 @@ ASTContextRef ASTContextCreate(AllocatorRef allocator, StringRef moduleName) {
                                                                               8);
     context->nodes[ASTTagIntrinsicFunctionDeclaration] = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTFunctionDeclaration),
                                                                                 8);
-    context->nodes[ASTTagStructureDeclaration]   = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTStructureDeclaration), 8);
+    context->nodes[ASTTagStructureDeclaration] = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTStructureDeclaration), 8);
+    context->nodes[ASTTagGenericStructureDeclaration] = BucketArrayCreateEmpty(context->allocator,
+                                                                               sizeof(struct _ASTGenericStructureDeclaration), 8);
     context->nodes[ASTTagInitializerDeclaration] = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTInitializerDeclaration), 8);
     context->nodes[ASTTagValueDeclaration]       = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTValueDeclaration), 8);
     context->nodes[ASTTagTypeAliasDeclaration]   = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTTypeAliasDeclaration), 8);
@@ -619,6 +621,35 @@ ASTStructureDeclarationRef ASTContextCreateStructureDeclaration(ASTContextRef co
     }
 
     node->base.type = (ASTTypeRef)ASTContextCreateStructureType(context, location, scope, node);
+    return node;
+}
+
+ASTGenericStructureDeclarationRef ASTContextCreateGenericStructureDeclaration(ASTContextRef context, SourceRange location, ScopeID scope,
+                                                                              StringRef name, ArrayRef genericParameters, ArrayRef values,
+                                                                              ArrayRef initializers) {
+    assert(name);
+
+    ASTGenericStructureDeclarationRef node = (ASTGenericStructureDeclarationRef)_ASTContextCreateNode(
+        context, ASTTagGenericStructureDeclaration, location, scope);
+    node->base.name         = StringCreateCopy(context->tempAllocator, name);
+    node->base.mangledName  = NULL;
+    node->base.type         = NULL;
+    node->genericParameters = ASTContextCreateArray(context, location, scope);
+    node->values            = ASTContextCreateArray(context, location, scope);
+    node->initializers      = ASTContextCreateArray(context, location, scope);
+    node->innerScope        = kScopeNull;
+    if (genericParameters) {
+        ASTArrayAppendArray(node->genericParameters, genericParameters);
+    }
+
+    if (values) {
+        ASTArrayAppendArray(node->values, values);
+    }
+
+    if (initializers) {
+        ASTArrayAppendArray(node->initializers, initializers);
+    }
+
     return node;
 }
 

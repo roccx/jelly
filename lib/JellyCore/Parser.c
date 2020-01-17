@@ -48,7 +48,7 @@ static inline ASTFunctionDeclarationRef _ParserParseFunctionDeclaration(ParserRe
 static inline ASTFunctionDeclarationRef _ParserParseForeignFunctionDeclaration(ParserRef parser);
 static inline ASTFunctionDeclarationRef _ParserParsePrefixFunctionDeclaration(ParserRef parser);
 static inline ASTFunctionDeclarationRef _ParserParseInfixFunctionDeclaration(ParserRef parser);
-static inline ASTStructureDeclarationRef _ParserParseStructureDeclaration(ParserRef parser);
+static inline ASTDeclarationRef _ParserParseStructureDeclaration(ParserRef parser);
 static inline ASTInitializerDeclarationRef _ParserParseInitializerDeclaration(ParserRef parser);
 static inline ASTValueDeclarationRef _ParserParseVariableDeclaration(ParserRef parser);
 static inline ASTTypeAliasDeclarationRef _ParserParseTypeAliasDeclaration(ParserRef parser);
@@ -1625,7 +1625,7 @@ static inline ASTFunctionDeclarationRef _ParserParseInfixFunctionDeclaration(Par
 }
 
 /// grammar: struct-declaration := "struct" identifier "{" { value-declaration } "}"
-static inline ASTStructureDeclarationRef _ParserParseStructureDeclaration(ParserRef parser) {
+static inline ASTDeclarationRef _ParserParseStructureDeclaration(ParserRef parser) {
     SymbolTableRef symbolTable = ASTContextGetSymbolTable(parser->context);
     SourceRange location       = parser->token.location;
 
@@ -1637,6 +1637,37 @@ static inline ASTStructureDeclarationRef _ParserParseStructureDeclaration(Parser
     if (!name) {
         ReportError("Expected `name` of `struct-declaration`");
         return NULL;
+    }
+
+    Bool isGeneric             = false;
+    ArrayRef genericParameters = ArrayCreateEmpty(parser->tempAllocator, sizeof(ASTNodeRef), 8);
+    if (_ParserConsumeToken(parser, TokenKindLessThan)) {
+        isGeneric = true;
+
+        while (!_ParserIsToken(parser, TokenKindGreaterThan)) {
+            ASTValueDeclarationRef parameter = _ParserParseParameterDeclaration(parser);
+            if (!parameter) {
+                return NULL;
+            }
+
+            assert(parameter->kind == ASTValueKindParameter);
+
+            ArrayAppendElement(genericParameters, &parameter);
+
+            if (_ParserIsToken(parser, TokenKindGreaterThan)) {
+                break;
+            }
+
+            if (!_ParserConsumeToken(parser, TokenKindComma)) {
+                ReportError("Expected ',' or ')' in generic parameter list of 'struct-declaration'");
+                return NULL;
+            }
+        }
+
+        if (!_ParserConsumeToken(parser, TokenKindGreaterThan)) {
+            ReportError("Expected '>' after generic parameter list of `struct-declaration`");
+            return NULL;
+        }
     }
 
     if (!_ParserConsumeToken(parser, TokenKindLeftCurlyBracket)) {
@@ -1690,12 +1721,21 @@ static inline ASTStructureDeclarationRef _ParserParseStructureDeclaration(Parser
 
     _ParserPopScope(parser);
 
-    location.end                           = parser->token.location.start;
-    ASTStructureDeclarationRef declaration = ASTContextCreateStructureDeclaration(parser->context, location, parser->currentScope, name,
-                                                                                  values, initializers);
-    declaration->innerScope                = structScope;
-    SymbolTableSetScopeUserdata(symbolTable, structScope, declaration);
-    return declaration;
+    location.end = parser->token.location.start;
+
+    if (isGeneric) {
+        ASTGenericStructureDeclarationRef declaration = ASTContextCreateGenericStructureDeclaration(
+            parser->context, location, parser->currentScope, name, genericParameters, values, initializers);
+        declaration->innerScope = structScope;
+        SymbolTableSetScopeUserdata(symbolTable, structScope, declaration);
+        return (ASTDeclarationRef)declaration;
+    } else {
+        ASTStructureDeclarationRef declaration = ASTContextCreateStructureDeclaration(parser->context, location, parser->currentScope, name,
+                                                                                      values, initializers);
+        declaration->innerScope                = structScope;
+        SymbolTableSetScopeUserdata(symbolTable, structScope, declaration);
+        return (ASTDeclarationRef)declaration;
+    }
 }
 
 /// grammar: initializer-declaration := "init" "(" [ parameter-declaration { "," parameter-declaration } ] ")" block

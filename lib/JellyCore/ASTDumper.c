@@ -276,6 +276,15 @@ void ASTDumperDump(ASTDumperRef dumper, ASTNodeRef node) {
         return;
     }
 
+    case ASTTagGenericStructureDeclaration: {
+        ASTGenericStructureDeclarationRef structure = (ASTGenericStructureDeclarationRef)node;
+        _ASTDumperPrintProperty(dumper, "name", StringGetCharacters(structure->base.name));
+        _ASTDumperDumpChildrenArray(dumper, structure->genericParameters);
+        _ASTDumperDumpChildrenArray(dumper, structure->values);
+        _ASTDumperDumpChildrenArray(dumper, structure->initializers);
+        return;
+    }
+
     case ASTTagValueDeclaration: {
         ASTValueDeclarationRef value = (ASTValueDeclarationRef)node;
         _ASTDumperPrintProperty(dumper, "name", StringGetCharacters(value->base.name));
@@ -489,6 +498,9 @@ static inline void _ASTDumperPrintTag(ASTDumperRef dumper, ASTNodeRef node) {
 
     case ASTTagStructureDeclaration:
         return _ASTDumperPrintCString(dumper, "StructureDeclaration");
+
+    case ASTTagGenericStructureDeclaration:
+        return _ASTDumperPrintCString(dumper, "GenericStructureDeclaration");
 
     case ASTTagValueDeclaration: {
         ASTValueDeclarationRef value = (ASTValueDeclarationRef)node;
