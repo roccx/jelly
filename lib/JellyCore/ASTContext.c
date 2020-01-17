@@ -56,7 +56,7 @@ ASTContextRef ASTContextCreate(AllocatorRef allocator, StringRef moduleName) {
     context->nodes[ASTTagSubscriptExpression]    = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTSubscriptExpression), 8);
     context->nodes[ASTTagTypeOperationExpression] = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTTypeOperationExpression),
                                                                            8);
-    context->nodes[ASTTagTypeExpression] = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTTypeExpression), 8);
+    context->nodes[ASTTagTypeExpression]          = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTTypeExpression), 8);
     context->nodes[ASTTagModuleDeclaration]       = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTModuleDeclaration), 8);
     context->nodes[ASTTagEnumerationDeclaration] = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTEnumerationDeclaration), 8);
     context->nodes[ASTTagFunctionDeclaration]    = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTFunctionDeclaration), 8);
@@ -64,6 +64,8 @@ ASTContextRef ASTContextCreate(AllocatorRef allocator, StringRef moduleName) {
                                                                               8);
     context->nodes[ASTTagIntrinsicFunctionDeclaration] = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTFunctionDeclaration),
                                                                                 8);
+    context->nodes[ASTTagGenericFunctionDeclaration]   = BucketArrayCreateEmpty(context->allocator,
+                                                                              sizeof(struct _ASTGenericFunctionDeclaration), 8);
     context->nodes[ASTTagStructureDeclaration] = BucketArrayCreateEmpty(context->allocator, sizeof(struct _ASTStructureDeclaration), 8);
     context->nodes[ASTTagGenericStructureDeclaration] = BucketArrayCreateEmpty(context->allocator,
                                                                                sizeof(struct _ASTGenericStructureDeclaration), 8);
@@ -598,6 +600,31 @@ ASTFunctionDeclarationRef ASTContextCreateIntrinsicFunctionDeclaration(ASTContex
     node->base.type     = (ASTTypeRef)ASTContextCreateFunctionTypeForDeclaration(context, location, scope, node);
     node->foreignName   = NULL;
     node->intrinsicName = StringCreateCopy(context->tempAllocator, intrinsicName);
+    return node;
+}
+
+ASTGenericFunctionDeclarationRef ASTContextCreateGenericFunctionDeclaration(ASTContextRef context, SourceRange location, ScopeID scope,
+                                                                            ASTFixity fixity, StringRef name, ArrayRef genericTypes,
+                                                                            ArrayRef parameters, ASTTypeRef returnType, ASTBlockRef body) {
+    assert(name && returnType && body);
+
+    ASTGenericFunctionDeclarationRef node = (ASTGenericFunctionDeclarationRef)_ASTContextCreateNode(
+        context, ASTTagGenericFunctionDeclaration, location, scope);
+    node->base.name        = StringCreateCopy(context->tempAllocator, name);
+    node->base.mangledName = NULL;
+    node->base.type        = NULL;
+    node->fixity           = ASTFixityNone;
+    node->genericTypes     = ASTContextCreateArray(context, location, scope);
+    if (genericTypes) {
+        ASTArrayAppendArray(node->genericTypes, genericTypes);
+    }
+    node->parameters = ASTContextCreateArray(context, location, scope);
+    if (parameters) {
+        ASTArrayAppendArray(node->parameters, parameters);
+    }
+    node->returnType = returnType;
+    node->body       = body;
+    node->innerScope = kScopeNull;
     return node;
 }
 

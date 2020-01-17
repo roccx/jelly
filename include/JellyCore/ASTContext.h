@@ -108,6 +108,10 @@ ASTFunctionDeclarationRef ASTContextCreateIntrinsicFunctionDeclaration(ASTContex
                                                                        ASTFixity fixity, StringRef name, ArrayRef parameters,
                                                                        ASTTypeRef returnType, StringRef intrinsicName);
 
+ASTGenericFunctionDeclarationRef ASTContextCreateGenericFunctionDeclaration(ASTContextRef context, SourceRange location, ScopeID scope,
+                                                                            ASTFixity fixity, StringRef name, ArrayRef genericTypes,
+                                                                            ArrayRef parameters, ASTTypeRef returnType, ASTBlockRef body);
+
 ASTStructureDeclarationRef ASTContextCreateStructureDeclaration(ASTContextRef context, SourceRange location, ScopeID scope, StringRef name,
                                                                 ArrayRef values, ArrayRef initializers);
 

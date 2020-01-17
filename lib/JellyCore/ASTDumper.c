@@ -261,6 +261,18 @@ void ASTDumperDump(ASTDumperRef dumper, ASTNodeRef node) {
         return;
     }
 
+    case ASTTagGenericFunctionDeclaration: {
+        ASTGenericFunctionDeclarationRef func = (ASTGenericFunctionDeclarationRef)node;
+        _ASTDumperPrintProperty(dumper, "name", StringGetCharacters(func->base.name));
+        _ASTDumperDumpChildrenArray(dumper, func->genericTypes);
+        _ASTDumperDumpChildrenArray(dumper, func->parameters);
+        _ASTDumperDumpChild(dumper, func->returnType);
+        if (func->body) {
+            _ASTDumperDumpChild(dumper, (ASTNodeRef)func->body);
+        }
+        return;
+    }
+
     case ASTTagInitializerDeclaration: {
         ASTInitializerDeclarationRef init = (ASTInitializerDeclarationRef)node;
         _ASTDumperDumpChildrenArray(dumper, init->parameters);
@@ -492,6 +504,9 @@ static inline void _ASTDumperPrintTag(ASTDumperRef dumper, ASTNodeRef node) {
 
     case ASTTagFunctionDeclaration:
         return _ASTDumperPrintCString(dumper, "FunctionDeclaration");
+
+    case ASTTagGenericFunctionDeclaration:
+        return _ASTDumperPrintCString(dumper, "GenericFunctionDeclaration");
 
     case ASTTagInitializerDeclaration:
         return _ASTDumperPrintCString(dumper, "InitializerDeclaration");

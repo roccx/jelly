@@ -1,0 +1,74 @@
+ModuleDeclaration
+  SourceUnit
+    @filePath = 'generic_functions.jelly'
+    GenericFunctionDeclaration
+      @name = 'parse'
+      OpaqueType
+        @name = 'Value'
+      ParameterDeclaration
+        @name = 'value'
+        OpaqueType
+          @name = 'Value'
+      BuiltinType
+        @name = 'Void'
+      Block
+    GenericFunctionDeclaration
+      @name = 'min'
+      OpaqueType
+        @name = 'Value'
+      ParameterDeclaration
+        @name = 'lhs'
+        OpaqueType
+          @name = 'Value'
+      ParameterDeclaration
+        @name = 'rhs'
+        OpaqueType
+          @name = 'Value'
+      OpaqueType
+        @name = 'Value'
+      Block
+        IfStatement
+          BinaryExpression
+            @operator = '>'
+            IdentifierExpression
+              @identifier = 'rhs'
+            IdentifierExpression
+              @identifier = 'lhs'
+          Block
+            ReturnStatement
+              IdentifierExpression
+                @identifier = 'rhs'
+          Block
+        ReturnStatement
+          IdentifierExpression
+            @identifier = 'lhs'
+    GenericFunctionDeclaration
+      @name = 'max'
+      OpaqueType
+        @name = 'Value'
+      ParameterDeclaration
+        @name = 'lhs'
+        OpaqueType
+          @name = 'Value'
+      ParameterDeclaration
+        @name = 'rhs'
+        OpaqueType
+          @name = 'Value'
+      OpaqueType
+        @name = 'Value'
+      Block
+        IfStatement
+          BinaryExpression
+            @operator = '>'
+            IdentifierExpression
+              @identifier = 'lhs'
+            IdentifierExpression
+              @identifier = 'rhs'
+          Block
+            ReturnStatement
+              IdentifierExpression
+                @identifier = 'lhs'
+          Block
+        ReturnStatement
+          IdentifierExpression
+            @identifier = 'rhs'

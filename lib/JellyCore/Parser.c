@@ -44,10 +44,10 @@ static inline ASTIdentifierExpressionRef _ParserParseIdentifierExpression(Parser
 static inline ASTCallExpressionRef _ParserParseCallExpression(ParserRef parser, ASTExpressionRef callee);
 static inline ASTConstantExpressionRef _ParserParseConstantExpression(ParserRef parser);
 static inline ASTEnumerationDeclarationRef _ParserParseEnumerationDeclaration(ParserRef parser);
-static inline ASTFunctionDeclarationRef _ParserParseFunctionDeclaration(ParserRef parser);
-static inline ASTFunctionDeclarationRef _ParserParseForeignFunctionDeclaration(ParserRef parser);
-static inline ASTFunctionDeclarationRef _ParserParsePrefixFunctionDeclaration(ParserRef parser);
-static inline ASTFunctionDeclarationRef _ParserParseInfixFunctionDeclaration(ParserRef parser);
+static inline ASTDeclarationRef _ParserParseFunctionDeclaration(ParserRef parser);
+static inline ASTDeclarationRef _ParserParseForeignFunctionDeclaration(ParserRef parser);
+static inline ASTDeclarationRef _ParserParsePrefixFunctionDeclaration(ParserRef parser);
+static inline ASTDeclarationRef _ParserParseInfixFunctionDeclaration(ParserRef parser);
 static inline ASTDeclarationRef _ParserParseStructureDeclaration(ParserRef parser);
 static inline ASTInitializerDeclarationRef _ParserParseInitializerDeclaration(ParserRef parser);
 static inline ASTValueDeclarationRef _ParserParseVariableDeclaration(ParserRef parser);
@@ -1231,9 +1231,9 @@ static inline ASTEnumerationDeclarationRef _ParserParseEnumerationDeclaration(Pa
     return enumeration;
 }
 
-/// grammar: func-declaration := "func" identifier "(" [ parameter-declaration { "," parameter-declaration } ] ")" "->" type-identifier
-/// block
-static inline ASTFunctionDeclarationRef _ParserParseFunctionDeclaration(ParserRef parser) {
+/// grammar: func-declaration := "func" identifier [ "<" opaque-type { "," opaque-type } ">" ]
+///                              "(" [ parameter-declaration { "," parameter-declaration } ] ")" "->" type-identifier block
+static inline ASTDeclarationRef _ParserParseFunctionDeclaration(ParserRef parser) {
     SymbolTableRef symbolTable = ASTContextGetSymbolTable(parser->context);
     SourceRange location       = parser->token.location;
 
@@ -1245,6 +1245,32 @@ static inline ASTFunctionDeclarationRef _ParserParseFunctionDeclaration(ParserRe
     if (!name) {
         ReportError("Expected name of 'func'");
         return NULL;
+    }
+
+    Bool isGeneric        = false;
+    ArrayRef genericTypes = ArrayCreateEmpty(parser->tempAllocator, sizeof(ASTTypeRef), 8);
+    if (_ParserConsumeToken(parser, TokenKindLessThan)) {
+        isGeneric = true;
+
+        if (!_ParserIsToken(parser, TokenKindGreaterThan)) {
+            do {
+                SourceRange genericTypeLocation = parser->token.location;
+                StringRef genericTypeName       = _ParserConsumeIdentifier(parser);
+                if (!genericTypeName) {
+                    return NULL;
+                }
+
+                genericTypeLocation.end = parser->token.location.start;
+                ASTTypeRef genericType  = (ASTTypeRef)ASTContextCreateOpaqueType(parser->context, genericTypeLocation, parser->currentScope,
+                                                                                genericTypeName);
+                ArrayAppendElement(genericTypes, &genericType);
+
+            } while (_ParserConsumeToken(parser, TokenKindComma));
+        }
+
+        if (!_ParserConsumeToken(parser, TokenKindGreaterThan)) {
+            return NULL;
+        }
     }
 
     if (!_ParserConsumeToken(parser, TokenKindLeftParenthesis)) {
@@ -1295,6 +1321,11 @@ static inline ASTFunctionDeclarationRef _ParserParseFunctionDeclaration(ParserRe
     }
 
     if (_ParserConsumeToken(parser, TokenKindDirectiveIntrinsic)) {
+        if (isGeneric) {
+            ReportError("Intrinsic functions cannot be generic");
+            return NULL;
+        }
+
         ASTConstantExpressionRef intrinsic = _ParserParseConstantExpression(parser);
         if (!intrinsic || intrinsic->kind != ASTConstantKindString) {
             ReportError("Expected string literal after `#intrinsic` directive");
@@ -1310,7 +1341,7 @@ static inline ASTFunctionDeclarationRef _ParserParseFunctionDeclaration(ParserRe
             parser->context, location, parser->currentScope, ASTFixityPrefix, name, parameters, returnType, intrinsicName);
         function->innerScope = funcScope;
         SymbolTableSetScopeUserdata(symbolTable, funcScope, function);
-        return function;
+        return (ASTDeclarationRef)function;
     } else {
         ASTBlockRef body = _ParserParseBlock(parser);
         if (!body) {
@@ -1319,17 +1350,25 @@ static inline ASTFunctionDeclarationRef _ParserParseFunctionDeclaration(ParserRe
 
         _ParserPopScope(parser);
 
-        location.end                       = parser->token.location.start;
-        ASTFunctionDeclarationRef function = ASTContextCreateFunctionDeclaration(parser->context, location, parser->currentScope,
-                                                                                 ASTFixityPrefix, name, parameters, returnType, body);
-        function->innerScope               = funcScope;
-        SymbolTableSetScopeUserdata(symbolTable, funcScope, function);
-        return function;
+        location.end = parser->token.location.start;
+        if (isGeneric) {
+            ASTGenericFunctionDeclarationRef function = ASTContextCreateGenericFunctionDeclaration(
+                parser->context, location, parser->currentScope, ASTFixityNone, name, genericTypes, parameters, returnType, body);
+            function->innerScope = funcScope;
+            SymbolTableSetScopeUserdata(symbolTable, funcScope, function);
+            return (ASTDeclarationRef)function;
+        } else {
+            ASTFunctionDeclarationRef function = ASTContextCreateFunctionDeclaration(parser->context, location, parser->currentScope,
+                                                                                     ASTFixityNone, name, parameters, returnType, body);
+            function->innerScope               = funcScope;
+            SymbolTableSetScopeUserdata(symbolTable, funcScope, function);
+            return (ASTDeclarationRef)function;
+        }
     }
 }
 
-/// grammar: foreign-func-declaration := "prefix" "func" identifier "(" [ parameter { "," parameter } ] ")" "->" type-identifier
-static inline ASTFunctionDeclarationRef _ParserParseForeignFunctionDeclaration(ParserRef parser) {
+/// grammar: foreign-func-declaration := "#foreign" "func" identifier "(" [ parameter { "," parameter } ] ")" "->" type-identifier
+static inline ASTDeclarationRef _ParserParseForeignFunctionDeclaration(ParserRef parser) {
     SymbolTableRef symbolTable = ASTContextGetSymbolTable(parser->context);
     SourceRange location       = parser->token.location;
 
@@ -1407,11 +1446,12 @@ static inline ASTFunctionDeclarationRef _ParserParseForeignFunctionDeclaration(P
         parser->context, location, parser->currentScope, ASTFixityNone, name, parameters, returnType, foreign->stringValue);
     function->innerScope = funcScope;
     SymbolTableSetScopeUserdata(symbolTable, funcScope, function);
-    return function;
+    return (ASTDeclarationRef)function;
 }
 
-/// grammar: prefix-func-declaration := "prefix" "func" unary-operator "(" [ parameter { "," parameter } ] ")" "->" type-identifier block
-static inline ASTFunctionDeclarationRef _ParserParsePrefixFunctionDeclaration(ParserRef parser) {
+/// grammar: prefix-func-declaration := "prefix" "func" unary-operator [ "<" opaque-type { "," opaque-type } ">" ]
+///                                     "(" [ parameter { "," parameter } ] ")" "->" type-identifier block
+static inline ASTDeclarationRef _ParserParsePrefixFunctionDeclaration(ParserRef parser) {
     SymbolTableRef symbolTable = ASTContextGetSymbolTable(parser->context);
     SourceRange location       = parser->token.location;
 
@@ -1431,6 +1471,32 @@ static inline ASTFunctionDeclarationRef _ParserParsePrefixFunctionDeclaration(Pa
     }
 
     StringRef name = ASTGetPrefixOperatorName(parser->tempAllocator, op);
+
+    Bool isGeneric        = false;
+    ArrayRef genericTypes = ArrayCreateEmpty(parser->tempAllocator, sizeof(ASTTypeRef), 8);
+    if (_ParserConsumeToken(parser, TokenKindLessThan)) {
+        isGeneric = true;
+
+        if (!_ParserIsToken(parser, TokenKindGreaterThan)) {
+            do {
+                SourceRange genericTypeLocation = parser->token.location;
+                StringRef genericTypeName       = _ParserConsumeIdentifier(parser);
+                if (!genericTypeName) {
+                    return NULL;
+                }
+
+                genericTypeLocation.end = parser->token.location.start;
+                ASTTypeRef genericType  = (ASTTypeRef)ASTContextCreateOpaqueType(parser->context, genericTypeLocation, parser->currentScope,
+                                                                                genericTypeName);
+                ArrayAppendElement(genericTypes, &genericType);
+
+            } while (_ParserConsumeToken(parser, TokenKindComma));
+        }
+
+        if (!_ParserConsumeToken(parser, TokenKindGreaterThan)) {
+            return NULL;
+        }
+    }
 
     if (!_ParserConsumeToken(parser, TokenKindLeftParenthesis)) {
         ReportError("Expected parameter list after name of 'func'");
@@ -1484,6 +1550,11 @@ static inline ASTFunctionDeclarationRef _ParserParsePrefixFunctionDeclaration(Pa
     }
 
     if (_ParserConsumeToken(parser, TokenKindDirectiveIntrinsic)) {
+        if (isGeneric) {
+            ReportError("Intrinsic functions cannot be generic");
+            return NULL;
+        }
+
         ASTConstantExpressionRef intrinsic = _ParserParseConstantExpression(parser);
         if (!intrinsic || intrinsic->kind != ASTConstantKindString) {
             ReportError("Expected string literal after `#intrinsic` directive");
@@ -1499,7 +1570,7 @@ static inline ASTFunctionDeclarationRef _ParserParsePrefixFunctionDeclaration(Pa
             parser->context, location, parser->currentScope, ASTFixityPrefix, name, parameters, returnType, intrinsicName);
         function->innerScope = funcScope;
         SymbolTableSetScopeUserdata(symbolTable, funcScope, function);
-        return function;
+        return (ASTDeclarationRef)function;
     } else {
         ASTBlockRef body = _ParserParseBlock(parser);
         if (!body) {
@@ -1508,17 +1579,26 @@ static inline ASTFunctionDeclarationRef _ParserParsePrefixFunctionDeclaration(Pa
 
         _ParserPopScope(parser);
 
-        location.end                       = parser->token.location.start;
-        ASTFunctionDeclarationRef function = ASTContextCreateFunctionDeclaration(parser->context, location, parser->currentScope,
-                                                                                 ASTFixityPrefix, name, parameters, returnType, body);
-        function->innerScope               = funcScope;
-        SymbolTableSetScopeUserdata(symbolTable, funcScope, function);
-        return function;
+        location.end = parser->token.location.start;
+        if (isGeneric) {
+            ASTGenericFunctionDeclarationRef function = ASTContextCreateGenericFunctionDeclaration(
+                parser->context, location, parser->currentScope, ASTFixityPrefix, name, genericTypes, parameters, returnType, body);
+            function->innerScope = funcScope;
+            SymbolTableSetScopeUserdata(symbolTable, funcScope, function);
+            return (ASTDeclarationRef)function;
+        } else {
+            ASTFunctionDeclarationRef function = ASTContextCreateFunctionDeclaration(parser->context, location, parser->currentScope,
+                                                                                     ASTFixityPrefix, name, parameters, returnType, body);
+            function->innerScope               = funcScope;
+            SymbolTableSetScopeUserdata(symbolTable, funcScope, function);
+            return (ASTDeclarationRef)function;
+        }
     }
 }
 
-/// grammar: infix-func-declaration := "infix" "func" binary-operator "(" [ parameter { "," parameter } ] ")" "->" type-identifier block
-static inline ASTFunctionDeclarationRef _ParserParseInfixFunctionDeclaration(ParserRef parser) {
+/// grammar: infix-func-declaration := "infix" "func" binary-operator [ "<" opaque-type { "," opaque-type } ">" ]
+///                                    "(" [ parameter { "," parameter } ] ")" "->" type-identifier block
+static inline ASTDeclarationRef _ParserParseInfixFunctionDeclaration(ParserRef parser) {
     SymbolTableRef symbolTable = ASTContextGetSymbolTable(parser->context);
     SourceRange location       = parser->token.location;
 
@@ -1538,6 +1618,32 @@ static inline ASTFunctionDeclarationRef _ParserParseInfixFunctionDeclaration(Par
     }
 
     StringRef name = ASTGetPrefixOperatorName(parser->tempAllocator, op);
+
+    Bool isGeneric        = false;
+    ArrayRef genericTypes = ArrayCreateEmpty(parser->tempAllocator, sizeof(ASTTypeRef), 8);
+    if (_ParserConsumeToken(parser, TokenKindLessThan)) {
+        isGeneric = true;
+
+        if (!_ParserIsToken(parser, TokenKindGreaterThan)) {
+            do {
+                SourceRange genericTypeLocation = parser->token.location;
+                StringRef genericTypeName       = _ParserConsumeIdentifier(parser);
+                if (!genericTypeName) {
+                    return NULL;
+                }
+
+                genericTypeLocation.end = parser->token.location.start;
+                ASTTypeRef genericType  = (ASTTypeRef)ASTContextCreateOpaqueType(parser->context, genericTypeLocation, parser->currentScope,
+                                                                                genericTypeName);
+                ArrayAppendElement(genericTypes, &genericType);
+
+            } while (_ParserConsumeToken(parser, TokenKindComma));
+        }
+
+        if (!_ParserConsumeToken(parser, TokenKindGreaterThan)) {
+            return NULL;
+        }
+    }
 
     if (!_ParserConsumeToken(parser, TokenKindLeftParenthesis)) {
         ReportError("Expected parameter list after name of 'func'");
@@ -1591,6 +1697,11 @@ static inline ASTFunctionDeclarationRef _ParserParseInfixFunctionDeclaration(Par
     }
 
     if (_ParserConsumeToken(parser, TokenKindDirectiveIntrinsic)) {
+        if (isGeneric) {
+            ReportError("Intrinsic functions cannot be generic");
+            return NULL;
+        }
+
         ASTConstantExpressionRef intrinsic = _ParserParseConstantExpression(parser);
         if (!intrinsic || intrinsic->kind != ASTConstantKindString) {
             ReportError("Expected string literal after `#intrinsic` directive");
@@ -1606,7 +1717,7 @@ static inline ASTFunctionDeclarationRef _ParserParseInfixFunctionDeclaration(Par
             parser->context, location, parser->currentScope, ASTFixityInfix, name, parameters, returnType, intrinsicName);
         function->innerScope = funcScope;
         SymbolTableSetScopeUserdata(symbolTable, funcScope, function);
-        return function;
+        return (ASTDeclarationRef)function;
     } else {
         ASTBlockRef body = _ParserParseBlock(parser);
         if (!body) {
@@ -1615,12 +1726,20 @@ static inline ASTFunctionDeclarationRef _ParserParseInfixFunctionDeclaration(Par
 
         _ParserPopScope(parser);
 
-        location.end                       = parser->token.location.start;
-        ASTFunctionDeclarationRef function = ASTContextCreateFunctionDeclaration(parser->context, location, parser->currentScope,
-                                                                                 ASTFixityInfix, name, parameters, returnType, body);
-        function->innerScope               = funcScope;
-        SymbolTableSetScopeUserdata(symbolTable, funcScope, function);
-        return function;
+        location.end = parser->token.location.start;
+        if (isGeneric) {
+            ASTGenericFunctionDeclarationRef function = ASTContextCreateGenericFunctionDeclaration(
+                parser->context, location, parser->currentScope, ASTFixityInfix, name, genericTypes, parameters, returnType, body);
+            function->innerScope = funcScope;
+            SymbolTableSetScopeUserdata(symbolTable, funcScope, function);
+            return (ASTDeclarationRef)function;
+        } else {
+            ASTFunctionDeclarationRef function = ASTContextCreateFunctionDeclaration(parser->context, location, parser->currentScope,
+                                                                                     ASTFixityInfix, name, parameters, returnType, body);
+            function->innerScope               = funcScope;
+            SymbolTableSetScopeUserdata(symbolTable, funcScope, function);
+            return (ASTDeclarationRef)function;
+        }
     }
 }
 

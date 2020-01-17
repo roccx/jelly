@@ -1,0 +1,30 @@
+func parse<Value>(value: Value) -> Void {}
+
+func min<Value>(lhs: Value, rhs: Value) -> Value {
+    if rhs > lhs {
+        return rhs
+    }
+
+    return lhs
+}
+
+func max<Value>(lhs: Value, rhs: Value) -> Value {
+    if lhs > rhs {
+        return lhs
+    }
+
+    return rhs
+}
+
+infix func + <Value>(lhs: Value, rhs: Value) -> Value {
+    return Value()
+}
+
+prefix func ~ <Argument>(argument: Argument*) -> Argument* {
+    return argument + 1
+}
+
+// T gets substituted to String
+func get<T>() -> T {
+    return "Hello World"
+}

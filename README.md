@@ -97,13 +97,13 @@ module-declaration := "module" identifier "{" [ { load-directive | link-directiv
 
 enum-declaration := "enum" identifier "{" [ enum-element { line-break enum-element } ] "}"
 
-func-declaration := "func" identifier "(" [ parameter-declaration { "," parameter-declaration } ] ")" "->" type-identifier block
+func-declaration := "func" identifier [ "<" opaque-type { "," opaque-type } ">" ] "(" [ parameter-declaration { "," parameter-declaration } ] ")" "->" type-identifier block
 
 foreign-func-declaration := "prefix" "func" identifier "(" [ parameter { "," parameter } ] ")" "->" type-identifier
 
-prefix-func-declaration := "prefix" "func" unary-operator "(" [ parameter { "," parameter } ] ")" "->" type-identifier block
+prefix-func-declaration := "prefix" "func" unary-operator [ "<" opaque-type { "," opaque-type } ">" ] "(" [ parameter { "," parameter } ] ")" "->" type-identifier block
 
-infix-func-declaration := "infix" "func" binary-operator "(" [ parameter { "," parameter } ] ")" "->" type-identifier block
+infix-func-declaration := "infix" "func" binary-operator [ "<" opaque-type { "," opaque-type } ">" ] "(" [ parameter { "," parameter } ] ")" "->" type-identifier block
 
 struct-declaration := "struct" identifier "{" { value-declaration | initializer-declaration } "}"
 
