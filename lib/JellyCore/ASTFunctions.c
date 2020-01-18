@@ -358,7 +358,7 @@ Bool ASTTypeIsEqual(ASTTypeRef lhs, ASTTypeRef rhs) {
     if (lhs->tag == ASTTagGenericType && rhs->tag == ASTTagGenericType) {
         ASTGenericTypeRef lhsType = (ASTGenericTypeRef)lhs;
         ASTGenericTypeRef rhsType = (ASTGenericTypeRef)rhs;
-        if (!ASTTypeIsEqual(lhsType->baseType, rhsType->baseType)) {
+        if (!ASTTypeIsEqual((ASTTypeRef)lhsType->baseType, (ASTTypeRef)rhsType->baseType)) {
             return false;
         }
 

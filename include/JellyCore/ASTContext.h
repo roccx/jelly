@@ -147,7 +147,7 @@ ASTFunctionTypeRef ASTContextCreateFunctionType(ASTContextRef context, SourceRan
 ASTStructureTypeRef ASTContextCreateStructureType(ASTContextRef context, SourceRange location, ScopeID scope,
                                                   ASTStructureDeclarationRef declaration);
 
-ASTGenericTypeRef ASTContextCreateGenericType(ASTContextRef context, SourceRange location, ScopeID scope, ASTTypeRef baseType,
+ASTGenericTypeRef ASTContextCreateGenericType(ASTContextRef context, SourceRange location, ScopeID scope, ASTOpaqueTypeRef baseType,
                                               ArrayRef arguments);
 
 ASTBuiltinTypeRef ASTContextGetBuiltinType(ASTContextRef context, ASTBuiltinTypeKind kind);

@@ -640,7 +640,7 @@ struct _ASTStructureType {
 struct _ASTGenericType {
     struct _ASTNode base;
 
-    ASTTypeRef baseType;
+    ASTOpaqueTypeRef baseType;
     ASTArrayRef arguments;
     ScopeID argumentScope;
 };

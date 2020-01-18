@@ -271,6 +271,10 @@ static inline void _ASTApplySubstitution(ASTContextRef context, ASTNodeRef node)
         return;
     }
 
+    if (node->tag == ASTTagGenericType) {
+        return;
+    }
+
     JELLY_UNREACHABLE("Invalid tag given for substitution!");
 }
 

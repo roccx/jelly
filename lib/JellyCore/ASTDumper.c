@@ -359,7 +359,7 @@ void ASTDumperDump(ASTDumperRef dumper, ASTNodeRef node) {
 
     case ASTTagGenericType: {
         ASTGenericTypeRef type = (ASTGenericTypeRef)node;
-        _ASTDumperDumpChild(dumper, type->baseType);
+        _ASTDumperDumpChild(dumper, (ASTNodeRef)type->baseType);
         _ASTDumperDumpChildrenArray(dumper, type->arguments);
         return;
     }
