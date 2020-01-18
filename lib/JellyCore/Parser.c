@@ -15,6 +15,7 @@ struct _Parser {
     ASTContextRef context;
     ScopeID currentScope;
     LexerRef lexer;
+    Index lexerSplitsConsecutivePunctuationsCounter;
     Token token;
 };
 
@@ -66,10 +67,11 @@ ParserRef ParserCreate(AllocatorRef allocator, ASTContextRef context) {
     ParserRef parser  = AllocatorAllocate(allocator, sizeof(struct _Parser));
     parser->allocator = allocator;
     // TODO: Replace tempAllocator with a pool allocator which resets after finishing a top level parse action.
-    parser->tempAllocator = TempAllocatorCreate(allocator);
-    parser->context       = context;
-    parser->currentScope  = kScopeGlobal;
-    parser->lexer         = NULL;
+    parser->tempAllocator                             = TempAllocatorCreate(allocator);
+    parser->context                                   = context;
+    parser->currentScope                              = kScopeGlobal;
+    parser->lexer                                     = NULL;
+    parser->lexerSplitsConsecutivePunctuationsCounter = 0;
     return parser;
 }
 
@@ -2057,7 +2059,7 @@ static inline ASTValueDeclarationRef _ParserParseParameterDeclaration(ParserRef 
 /// grammar: pointer-type             := type "*"
 /// grammar: array-type               := type "[" [ expression ] "]"
 /// grammar: function-pointer-type    := "(" [ type { "," type } ] ")" "->" type
-/// grammar: generic-type             := type "<" expression { "," expression } ">"
+/// grammar: generic-type             := type "<" ( type | primary-expression ) { "," ( type | primary-expression ) } ">"
 static inline ASTTypeRef _ParserParseType(ParserRef parser) {
     SourceRange location = parser->token.location;
     ASTTypeRef result    = NULL;
@@ -2155,6 +2157,8 @@ static inline ASTTypeRef _ParserParseType(ParserRef parser) {
         location.end = parser->token.location.start;
         result       = (ASTTypeRef)ASTContextCreateOpaqueType(parser->context, location, parser->currentScope, name);
 
+        parser->lexerSplitsConsecutivePunctuationsCounter += 1;
+        LexerSetSplitsConsecutivePunctuations(parser->lexer, parser->lexerSplitsConsecutivePunctuationsCounter > 0);
         if (_ParserConsumeToken(parser, TokenKindLessThan)) {
             ScopeID argumentScope = _ParserPushScope(parser, location, result, ScopeKindGenericType);
             ArrayRef arguments    = ArrayCreateEmpty(parser->tempAllocator, sizeof(ASTExpressionRef), 8);
@@ -2170,10 +2174,14 @@ static inline ASTTypeRef _ParserParseType(ParserRef parser) {
                     } else {
                         LexerSetState(parser->lexer, state);
                         LexerPeekToken(parser->lexer, &parser->token);
+                        LexerSetSplitsConsecutivePunctuations(parser->lexer, false);
                         argument = _ParserParsePrimaryExpression(parser);
+                        LexerSetSplitsConsecutivePunctuations(parser->lexer, true);
                     }
 
                     if (!argument) {
+                        parser->lexerSplitsConsecutivePunctuationsCounter -= 1;
+                        LexerSetSplitsConsecutivePunctuations(parser->lexer, parser->lexerSplitsConsecutivePunctuationsCounter > 0);
                         return NULL;
                     }
 
@@ -2184,17 +2192,27 @@ static inline ASTTypeRef _ParserParseType(ParserRef parser) {
 
             _ParserPopScope(parser);
 
-            location.end           = parser->token.location.start;
-            ASTGenericTypeRef type = ASTContextCreateGenericType(parser->context, location, parser->currentScope, result, arguments);
+            location.end = parser->token.location.start;
+
+            assert(result->tag == ASTTagOpaqueType);
+            ASTGenericTypeRef type = ASTContextCreateGenericType(parser->context, location, parser->currentScope, (ASTOpaqueTypeRef)result,
+                                                                 arguments);
             type->argumentScope    = argumentScope;
             result                 = (ASTTypeRef)type;
 
             if (!_ParserConsumeToken(parser, TokenKindGreaterThan)) {
+                parser->lexerSplitsConsecutivePunctuationsCounter -= 1;
+                LexerSetSplitsConsecutivePunctuations(parser->lexer, parser->lexerSplitsConsecutivePunctuationsCounter > 0);
                 return NULL;
             }
 
+            parser->lexerSplitsConsecutivePunctuationsCounter -= 1;
+            LexerSetSplitsConsecutivePunctuations(parser->lexer, parser->lexerSplitsConsecutivePunctuationsCounter > 0);
             return result;
         }
+
+        parser->lexerSplitsConsecutivePunctuationsCounter -= 1;
+        LexerSetSplitsConsecutivePunctuations(parser->lexer, parser->lexerSplitsConsecutivePunctuationsCounter > 0);
     }
 
     while (true) {
@@ -2204,7 +2222,9 @@ static inline ASTTypeRef _ParserParseType(ParserRef parser) {
         } else if (_ParserConsumeToken(parser, TokenKindLeftBracket)) {
             ASTExpressionRef size = NULL;
             if (!_ParserIsToken(parser, TokenKindRightBracket)) {
+                LexerSetSplitsConsecutivePunctuations(parser->lexer, false);
                 size = _ParserParseExpression(parser, 0, false);
+                LexerSetSplitsConsecutivePunctuations(parser->lexer, parser->lexerSplitsConsecutivePunctuationsCounter > 0);
                 if (!size) {
                     return NULL;
                 }
